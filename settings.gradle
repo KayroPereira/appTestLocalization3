@@ -1,0 +1,2 @@
+rootProject.name='appTestLocalization3'
+include ':app'
