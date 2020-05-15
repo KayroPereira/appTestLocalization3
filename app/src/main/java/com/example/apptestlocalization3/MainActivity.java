@@ -6,16 +6,24 @@ import androidx.core.app.ActivityCompat;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.content.pm.PackageManager;
 import android.icu.text.SimpleDateFormat;
 import android.location.Location;
+import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Looper;
+import android.util.JsonReader;
+import android.util.Log;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -33,6 +41,21 @@ import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+
 /*
 caixa
 57 até a parte superior da saida
@@ -47,6 +70,7 @@ public class MainActivity extends AppCompatActivity {
     private LocationCallback locationCallback;
 
     private TextView tvGeral;
+    private TextView tvClima;
     private Button btUpdate;
 
     private boolean requestingLocationUpdates = false;
@@ -58,6 +82,8 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         tvGeral = (TextView) findViewById(R.id.tvGeral);
+        tvClima = (TextView) findViewById(R.id.tvClima);
+
         btUpdate = (Button) findViewById(R.id.btUpdate);
 
         pedirPermissoes();
@@ -69,6 +95,17 @@ public class MainActivity extends AppCompatActivity {
         btUpdate.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                if (requestingLocationUpdates) {
+                    onPause();
+                    btUpdate.setText("Pause");
+                    tvGeral.setText("");
+                    tvClima.setText("");
+                }
+                else {
+                    startLocationUpdates();
+                    //onResume();
+                    btUpdate.setText("Start");
+                }
             }
 
         });
@@ -95,13 +132,16 @@ public class MainActivity extends AppCompatActivity {
         });
 */
 
+        //remover caso não queira uma verificação inicial
         //chamado quando se verifica o resultado da última localização indepedentimente da conexão está ativada ou não
+        /*
         fusedLocationClient.getLastLocation().addOnSuccessListener(this, new OnSuccessListener<Location>() {
             @Override
             public void onSuccess(Location location) {
                 updateData(location);
             }
         });
+         */
 
         locationCallback = new LocationCallback() {
             @Override
@@ -158,10 +198,14 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onResume() {
+        //Toast.makeText(getApplicationContext(), "teste5", Toast.LENGTH_LONG).show();
         super.onResume();
+        /*
         if (!requestingLocationUpdates) {
             startLocationUpdates();
         }
+
+         */
     }
 
     private void startLocationUpdates() {
