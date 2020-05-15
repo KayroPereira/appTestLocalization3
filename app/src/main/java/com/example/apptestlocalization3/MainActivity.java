@@ -13,6 +13,7 @@ import android.icu.text.SimpleDateFormat;
 import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Looper;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -41,8 +42,6 @@ caixa
 
 public class MainActivity extends AppCompatActivity {
 
-    final int REQUEST_CHECK_SETTINGS = 10;
-
     private FusedLocationProviderClient fusedLocationClient;
     private LocationRequest locationRequest;
     private LocationCallback locationCallback;
@@ -51,6 +50,7 @@ public class MainActivity extends AppCompatActivity {
     private Button btUpdate;
 
     private boolean requestingLocationUpdates = false;
+    final int REQUEST_CHECK_SETTINGS = 10;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,66 +64,42 @@ public class MainActivity extends AppCompatActivity {
         createLocationRequest();
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-
         LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder().addLocationRequest(locationRequest);
+
+        btUpdate.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+            }
+
+        });
 
         SettingsClient client = LocationServices.getSettingsClient(this);
         Task<LocationSettingsResponse> task = client.checkLocationSettings(builder.build());
 
-        /*
-        //chamado quando a activity é inicializada e a localização está ativa
-        task.addOnSuccessListener(this, new OnSuccessListener<LocationSettingsResponse>() {
-            @Override
-            public void onSuccess(LocationSettingsResponse locationSettingsResponse) {
-                // All location settings are satisfied. The client can initialize
-                // location requests here.
-                // ...
-                Toast.makeText(getApplicationContext(), "Autorização ok", Toast.LENGTH_LONG).show();
-            }
-        });
-         */
-
+/*
         //chamado quando há falha no pedido de localização
         task.addOnFailureListener(this, new OnFailureListener() {
             @Override
             public void onFailure(@NonNull Exception e) {
-                Toast.makeText(getApplicationContext(), "teste0", Toast.LENGTH_LONG).show();
                 if (e instanceof ResolvableApiException) {
-                    // Location settings are not satisfied, but this can be fixed
-                    // by showing the user a dialog.
-                    Toast.makeText(getApplicationContext(), "teste1", Toast.LENGTH_LONG).show();
                     try {
-                        // Show the dialog by calling startResolutionForResult(),
-                        // and check the result in onActivityResult().
+                        //solicita autorização para obter a localização
                         ResolvableApiException resolvable = (ResolvableApiException) e;
                         resolvable.startResolutionForResult(MainActivity.this, REQUEST_CHECK_SETTINGS);
-                        Toast.makeText(getApplicationContext(), "Autorização negada", Toast.LENGTH_LONG).show();
+                        //Toast.makeText(getApplicationContext(), "Autorização negada", Toast.LENGTH_LONG).show();
                     } catch (IntentSender.SendIntentException sendEx) {
                         Toast.makeText(getApplicationContext(), "Erro Autorização", Toast.LENGTH_LONG).show();
                     }
                 }
             }
         });
-
-        btUpdate.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-            }
-        });
+*/
 
         //chamado quando se verifica o resultado da última localização indepedentimente da conexão está ativada ou não
         fusedLocationClient.getLastLocation().addOnSuccessListener(this, new OnSuccessListener<Location>() {
             @Override
             public void onSuccess(Location location) {
-                // Got last known location. In some rare situations this can be null.
-                Toast.makeText(getApplicationContext(), "teste-10", Toast.LENGTH_LONG).show();
-                if (location != null) {
-                    tvGeral.setText("Latitude: " + location.getLatitude() + "\nLogitude: " + location.getLongitude() + "\nProvider: " + location.getProvider()
-                            + "\nTime: " + new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(location.getTime()) + "\nAccuracy: " + location.getAccuracy()
-                            + "\nAltitude: " + location.getAltitude() + "\nSpeed: " + location.getSpeed());
-                } else {
-                        tvGeral.setText("Erro: location null");
-                }
+                updateData(location);
             }
         });
 
@@ -131,16 +107,13 @@ public class MainActivity extends AppCompatActivity {
             @Override
             //chamado quando a conexão está ativada e se tem um resultado
             public void onLocationResult(LocationResult locationResult) {
-                Toast.makeText(getApplicationContext(), "teste-11", Toast.LENGTH_LONG).show();
                 if (locationResult == null) {
                     tvGeral.setText("Erro: location null");
                     return;
                 }
 
                 for (Location location : locationResult.getLocations()) {
-                    tvGeral.setText("Latitude: " + location.getLatitude() + "\nLogitude: " + location.getLongitude() + "\nProvider: " + location.getProvider()
-                            + "\nTime: " + new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(location.getTime()) + "\nAccuracy: " + location.getAccuracy()
-                            + "\nAltitude: " + location.getAltitude() + "\nSpeed: " + location.getSpeed());
+                    updateData(location);
                 }
             }
 
@@ -150,30 +123,28 @@ public class MainActivity extends AppCompatActivity {
                 super.onLocationAvailability(avail);
 
                 //testa se a localização esta habilitada
-                if (avail.isLocationAvailable())
-                    Toast.makeText(getApplicationContext(), "teste-2", Toast.LENGTH_LONG).show();
-                else
-                    Toast.makeText(getApplicationContext(), "teste-3", Toast.LENGTH_LONG).show();
+                if (!avail.isLocationAvailable()){
+                    Toast.makeText(getApplicationContext(), "Habilite a localização para utilizar todas as funcionalidades", Toast.LENGTH_LONG).show();
+                }
             }
         };
     }
 
-    //chamado quando se tem um resposta da solicitação de autorização da activity
+    //chamado quando se tem uma resposta da solicitação de autorização da activity
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        Toast.makeText(getApplicationContext(), "teste-12", Toast.LENGTH_LONG).show();
         switch (requestCode) {
             case REQUEST_CHECK_SETTINGS:
                 switch (resultCode) {
                     case Activity.RESULT_OK:
-                        Toast.makeText(getApplicationContext(), "teste5", Toast.LENGTH_LONG).show();
+                        //Toast.makeText(getApplicationContext(), "teste5", Toast.LENGTH_LONG).show();
                         break;
                     case Activity.RESULT_CANCELED:
-                        Toast.makeText(getApplicationContext(), "teste6", Toast.LENGTH_LONG).show();
+                        Toast.makeText(getApplicationContext(), "Não será possível conhecer sua localização", Toast.LENGTH_LONG).show();
                         break;
                     default:
-                        Toast.makeText(getApplicationContext(), "teste7", Toast.LENGTH_LONG).show();
+                        //Toast.makeText(getApplicationContext(), "teste7", Toast.LENGTH_LONG).show();
                         break;
                 }
         }
@@ -211,6 +182,17 @@ public class MainActivity extends AppCompatActivity {
         locationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
     }
 
+    private void updateData(Location location){
+        if (location == null) {
+            tvGeral.setText("Erro: location null");
+            return;
+        }
+
+        tvGeral.setText("Latitude: " + location.getLatitude() + "\nLogitude: " + location.getLongitude() + "\nProvider: " + location.getProvider()
+                + "\nTime: " + new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(location.getTime()) + "\nAccuracy: " + location.getAccuracy()
+                + "\nAltitude: " + location.getAltitude() + "\nSpeed: " + location.getSpeed());
+    }
+
     private void pedirPermissoes() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ) {
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
@@ -220,34 +202,4 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
-
-    /*
-    private void pedirPermissoes() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ) {
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
-                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-
-                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, REQUEST_CHECK_SETTINGS);
-            } else {
-                //configurarServico();
-                createLocationRequest();
-            }
-        }
-    }
-     */
-
-    /*
-    public void configurarServico(){
-        try {
-            Toast.makeText(this, "configurarServico", Toast.LENGTH_LONG).show();
-            //locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 5, locationListener, null);
-            //locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
-            //locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener, null);
-            //locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener, null);
-            //locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, (android.location.LocationListener) locationListener, null);
-        }catch(SecurityException ex){
-            Toast.makeText(this, ex.getMessage(), Toast.LENGTH_LONG).show();
-        }
-    }
-     */
 }
