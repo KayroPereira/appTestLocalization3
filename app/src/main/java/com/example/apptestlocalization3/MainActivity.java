@@ -74,6 +74,10 @@ public class MainActivity extends AppCompatActivity {
     private Button btUpdate;
 
     private boolean requestingLocationUpdates = false;
+    private int cont = 0;
+
+    private Localizacao localizacao = new Localizacao();
+
     final int REQUEST_CHECK_SETTINGS = 10;
 
     @Override
@@ -232,9 +236,61 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        tvGeral.setText("Latitude: " + location.getLatitude() + "\nLogitude: " + location.getLongitude() + "\nProvider: " + location.getProvider()
-                + "\nTime: " + new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(location.getTime()) + "\nAccuracy: " + location.getAccuracy()
-                + "\nAltitude: " + location.getAltitude() + "\nSpeed: " + location.getSpeed());
+        localizacao.setLatitude(location.getLatitude());
+        localizacao.setLongitude(location.getLongitude());
+        localizacao.setProvider(location.getProvider());
+        localizacao.setTime(location.getTime());
+        localizacao.setAccuracy(location.getAccuracy());
+        localizacao.setAltitude(location.getAltitude());
+        localizacao.setSpeed(location.getSpeed());
+
+        tvGeral.setText("Latitude: " + localizacao.getLatitude() + "\nLogitude: " + localizacao.getLongitude() + "\nProvider: " + localizacao.getProvider()
+                + "\nTime: " + new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(localizacao.getTime()) + "\nAccuracy: " + localizacao.getAccuracy()
+                + "\nAltitude: " + localizacao.getAltitude() + "\nSpeed: " + localizacao.getSpeed());
+
+        updateClima(localizacao);
+    }
+
+    private void updateClima(Localizacao localizacao){
+        //realiza a busca das informações do clima na cidade de Jaboatão dos Guararapes - PE
+        DownloadJsonAsyncTask downloadJson = new DownloadJsonAsyncTask(new DownloadJsonAsyncTask.AsyncResponseJson() {
+            ProgressDialog dialog;
+            @Override
+            public void processFinish(Clima result) {
+                if (result != null ) {
+                    String temp = "";
+
+                    temp += "Cidade: " + result.getCityName() + "\n";
+                    temp += "Data: " + result.getDate() + "\n";
+                    temp += "Temperatura: " + result.getTemp() + "\n";
+                    temp += "Humidade: " + result.getHumidity() + "\n\n";
+
+                    for (Clima.ClimaDia tempClima : result.getClimaDia()) {
+                        temp += "Data: " + tempClima.getDate() + "\n";
+                        temp += " Weekday: " + tempClima.getWeekday() + "\n";
+                        temp += " Max: " + tempClima.getMax() + "\n";
+                        temp += " Min: " + tempClima.getMin() + "\n";
+                        temp += " Condition: " + tempClima.getCondition() + "\n\n\n";
+                    }
+                    cont++;
+                    temp = "Contagem: " + cont + "\n\n" + temp;
+                    tvClima.setText(temp);
+                }else{
+                    tvClima.setText("Contagem: " + cont + "\n\n" + "Erro ao obter os dados");
+                }
+                dialog.dismiss();
+                //interrompe as atualizações
+                stopLocationUpdates();
+            }
+
+            @Override
+            public void processStart() {
+                dialog = ProgressDialog.show(MainActivity.this, "Aguarde", "Fazendo download do JSON");
+            }
+
+        });
+        downloadJson.execute("https://api.hgbrasil.com/weather?array_limit=3&fields=only_results,humidity,temp,city_name,forecast,condition,weekday,max,min,date&key=bdda2060&lat=" +
+                localizacao.getLatitude() + "&log=" + localizacao.getLongitude() + "&user_ip=remote");
     }
 
     private void pedirPermissoes() {
